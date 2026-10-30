@@ -1,0 +1,70 @@
+@page "/admin/options"
+@using System.Globalization
+@using CarConfigurator.Data.Services
+@using CarConfigurator.Domain.Entities
+@inject AdminService Admin
+@attribute [Authorize]
+
+<PageTitle>Admin: options</PageTitle>
+<AdminNav Active="options" />
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <div>
+        <MudText Typo="Typo.overline" Color="Color.Primary">Admin</MudText>
+        <MudText Typo="Typo.h4" Style="font-weight: 600;">Options</MudText>
+    </div>
+    <MudButton Href="/admin/options/new" Variant="Variant.Filled" Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Add">
+        Add option
+    </MudButton>
+</div>
+
+@if (_options is null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else if (_options.Count == 0)
+{
+    <MudAlert Severity="Severity.Info">No options yet.</MudAlert>
+}
+else
+{
+    <MudPaper Class="price-panel pa-4" Elevation="0">
+        <MudSimpleTable Dense="true" Hover="true" Elevation="0">
+            <thead>
+                <tr>
+                    <th>Category</th>
+                    <th>Name</th>
+                    <th style="text-align: right;">Price</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var option in _options)
+                {
+                    <tr>
+                        <td>@option.OptionCategory.Name</td>
+                        <td>@option.Name</td>
+                        <td style="text-align: right;">@option.Price.ToString("C0", Danish)</td>
+                        <td style="text-align: right;">
+                            <MudButton Href="@($"/admin/options/{option.Id}")" Size="Size.Small" Color="Color.Primary">
+                                Edit
+                            </MudButton>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+    </MudPaper>
+}
+
+@code {
+    private static readonly CultureInfo Danish = new("da-DK");
+
+    private List<Option>? _options;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _options = await Admin.GetOptionsAsync();
+    }
+}

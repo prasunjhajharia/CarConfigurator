@@ -1,0 +1,83 @@
+﻿@page "/"
+@using System.Globalization
+@using CarConfigurator.Data.Services
+@using CarConfigurator.Domain.Entities
+@inject ConfiguratorService Service
+
+<PageTitle>Car Configurator</PageTitle>
+
+<div class="hero">
+    <div class="hero-slide hero-slide-1"></div>
+    <div class="hero-slide hero-slide-2"></div>
+    <div class="hero-slide hero-slide-3"></div>
+    <div class="hero-overlay"></div>
+
+    <div class="hero-content">
+        <MudText Typo="Typo.overline" Color="Color.Primary">Car configurator</MudText>
+        <MudText Typo="Typo.h3" Style="font-weight: 600; color: #ffffff;">Build your car.</MudText>
+        <MudText Typo="Typo.subtitle1" Class="mt-2" Style="color: #d9dce3;">
+            Pick a model, choose your options and watch the price update live.
+        </MudText>
+    </div>
+</div>
+
+@if (_brands is null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    @foreach (var brand in _brands)
+    {
+        <MudText Typo="Typo.h5" Class="mt-8 mb-3" Style="font-weight: 600;">@brand.Name</MudText>
+
+        <MudGrid>
+            @foreach (var model in brand.CarModels)
+            {
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard Class="model-card" Elevation="0">
+                        <div class="model-visual">
+                            @if (!string.IsNullOrEmpty(model.ImageUrl))
+                            {
+                                <img src="@model.ImageUrl" alt="@model.Name" class="model-img" />
+                            }
+                            else
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.DirectionsCar"
+                                        Style="font-size: 4.5rem; opacity: 0.45;" />
+                            }
+                        </div>
+                        
+                        <MudCardContent>
+                            <MudText Typo="Typo.h6">@model.Name</MudText>
+                            <MudText Typo="Typo.body2" Style="color: var(--mud-palette-text-secondary);">
+                                @PriceText(model)
+                            </MudText>
+                        </MudCardContent>
+                        <MudCardActions>
+                            <MudButton Href="@($"/model/{model.Id}")" Variant="Variant.Filled" Color="Color.Primary" Class="ml-2 mb-2">
+                                Choose
+                            </MudButton>
+                        </MudCardActions>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+}
+
+@code {
+    private static readonly CultureInfo Danish = new("da-DK");
+
+    private List<Brand>? _brands;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _brands = await Service.GetBrandsAsync();
+    }
+
+    private static string PriceText(CarModel model)
+        => model.Trims.Count == 0
+            ? "Coming soon"
+            : $"From {model.Trims.Min(t => t.BasePrice).ToString("C0", Danish)}";
+}

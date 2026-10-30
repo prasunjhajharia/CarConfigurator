@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/CarConfigurator.Data/CarConfigurator.Data.csproj" />
+    <Project Path="src/CarConfigurator.Domain/CarConfigurator.Domain.csproj" />
+    <Project Path="src/CarConfigurator.Web/CarConfigurator.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/CarConfigurator.Tests/CarConfigurator.Tests.csproj" />
+  </Folder>
+</Solution>

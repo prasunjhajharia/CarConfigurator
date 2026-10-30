@@ -1,0 +1,73 @@
+@page "/admin/trims"
+@using System.Globalization
+@using CarConfigurator.Data.Services
+@using CarConfigurator.Domain.Entities
+@inject TrimAdminService TrimAdmin
+@attribute [Authorize]
+
+<PageTitle>Admin: trims</PageTitle>
+
+<AdminNav Active="trims" />
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <div>
+        <MudText Typo="Typo.overline" Color="Color.Primary">Admin</MudText>
+        <MudText Typo="Typo.h4" Style="font-weight: 600;">Trims and prices</MudText>
+    </div>
+    <MudButton Href="/admin/trims/new" Variant="Variant.Filled" Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Add">
+        Add trim
+    </MudButton>
+</div>
+
+@if (_trims is null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else if (_trims.Count == 0)
+{
+    <MudAlert Severity="Severity.Info">No trims yet.</MudAlert>
+}
+else
+{
+    <MudPaper Class="price-panel pa-4" Elevation="0">
+        <MudSimpleTable Dense="true" Hover="true" Elevation="0">
+            <thead>
+                <tr>
+                    <th>Brand</th>
+                    <th>Model</th>
+                    <th>Trim</th>
+                    <th style="text-align: right;">Base price</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var trim in _trims)
+                {
+                    <tr>
+                        <td>@trim.CarModel.Brand.Name</td>
+                        <td>@trim.CarModel.Name</td>
+                        <td>@trim.Name</td>
+                        <td style="text-align: right;">@trim.BasePrice.ToString("C0", Danish)</td>
+                        <td style="text-align: right;">
+                            <MudButton Href="@($"/admin/trims/{trim.Id}")" Size="Size.Small" Color="Color.Primary">
+                                Edit
+                            </MudButton>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+    </MudPaper>
+}
+
+@code {
+    private static readonly CultureInfo Danish = new("da-DK");
+
+    private List<Trim>? _trims;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _trims = await TrimAdmin.GetTrimsAsync();
+    }
+}

@@ -1,0 +1,147 @@
+@page "/admin/options/new"
+@page "/admin/options/{Id:int}"
+@using CarConfigurator.Data.Services
+@using CarConfigurator.Domain.Entities
+@inject AdminService Admin
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@inject ILogger<AdminOptionForm> Logger
+@attribute [Authorize]
+
+<PageTitle>Admin: option</PageTitle>
+
+<MudText Typo="Typo.overline" Color="Color.Primary">Admin</MudText>
+<MudText Typo="Typo.h4" Class="mb-4" Style="font-weight: 600;">
+    @(Id == 0 ? "Add option" : "Edit option")
+</MudText>
+
+@if (!_loaded)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else if (_form is null)
+{
+    <MudAlert Severity="Severity.Warning" Class="mb-4">Option not found.</MudAlert>
+    <MudButton Href="/admin/options" Variant="Variant.Outlined" Color="Color.Primary">Back to options</MudButton>
+}
+else
+{
+    <MudPaper Class="price-panel pa-5" Elevation="0" Style="max-width: 640px;">
+        <EditForm Model="_form" OnValidSubmit="SaveAsync">
+            <DataAnnotationsValidator />
+
+            <MudSelect T="int" @bind-Value="_form.OptionCategoryId" For="@(() => _form.OptionCategoryId)"
+                       Label="Category" Variant="Variant.Outlined" Class="mb-3">
+                @foreach (var category in _categories)
+                {
+                    <MudSelectItem T="int" Value="@category.Id">@category.Name</MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudTextField T="string" @bind-Value="_form.Name" For="@(() => _form.Name)"
+                          Label="Name" Variant="Variant.Outlined" Class="mb-3" />
+
+            <MudNumericField T="decimal" @bind-Value="_form.Price" For="@(() => _form.Price)"
+                             Label="Price (DKK)" Variant="Variant.Outlined" Min="0" Class="mb-4" />
+
+            <MudText Typo="Typo.subtitle1" Style="font-weight: 600;">Offered on these trims</MudText>
+            <MudText Typo="Typo.caption" Class="mb-2" Style="color: var(--mud-palette-text-secondary);">
+                Customers only see the option on the trims you tick.
+            </MudText>
+
+            @foreach (var group in _trims.GroupBy(t => $"{t.CarModel.Brand.Name} {t.CarModel.Name}"))
+            {
+                <MudText Typo="Typo.body2" Class="mt-3" Color="Color.Primary">@group.Key</MudText>
+                <div>
+                    @foreach (var trim in group)
+                    {
+                        <MudCheckBox T="bool"
+                                     Value="@_form.TrimIds.Contains(trim.Id)"
+                                     ValueChanged="@((bool on) => ToggleTrim(trim.Id, on))"
+                                     Label="@trim.Name" />
+                    }
+                </div>
+            }
+
+            @if (_form.TrimIds.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info" Class="mt-3">
+                    No trim selected, so customers will not see this option yet.
+                </MudAlert>
+            }
+
+            <div class="mt-5">
+                <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary"
+                           Disabled="@_saving">
+                    @(_saving ? "Saving..." : "Save")
+                </MudButton>
+                <MudButton Href="/admin/options" Variant="Variant.Outlined" Color="Color.Primary" Class="ml-2">
+                    Cancel
+                </MudButton>
+            </div>
+        </EditForm>
+    </MudPaper>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private OptionFormModel? _form;
+    private List<OptionCategory> _categories = new();
+    private List<Trim> _trims = new();
+    private bool _loaded;
+    private bool _saving;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _categories = await Admin.GetCategoriesAsync();
+        _trims = await Admin.GetTrimsAsync();
+
+        if (Id == 0)
+        {
+            _form = new OptionFormModel
+            {
+                OptionCategoryId = _categories.FirstOrDefault()?.Id ?? 0
+            };
+        }
+        else
+        {
+            _form = await Admin.GetOptionFormAsync(Id);
+        }
+
+        _loaded = true;
+    }
+
+    private void ToggleTrim(int trimId, bool on)
+    {
+        if (on)
+        {
+            if (!_form!.TrimIds.Contains(trimId)) _form.TrimIds.Add(trimId);
+        }
+        else
+        {
+            _form!.TrimIds.Remove(trimId);
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        _saving = true;
+
+        try
+        {
+            await Admin.SaveOptionAsync(_form!);
+            Snackbar.Add("Option saved.", Severity.Success);
+            Navigation.NavigateTo("/admin/options");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Saving option {OptionId} failed", _form!.Id);
+            Snackbar.Add("Could not save the option. Please try again.", Severity.Error);        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

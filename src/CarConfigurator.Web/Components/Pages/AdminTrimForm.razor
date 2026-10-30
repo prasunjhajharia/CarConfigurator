@@ -1,0 +1,124 @@
+@page "/admin/trims/new"
+@page "/admin/trims/{Id:int}"
+@using CarConfigurator.Data.Services
+@using CarConfigurator.Domain.Entities
+@inject TrimAdminService TrimAdmin
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@inject ILogger<AdminTrimForm> Logger
+@attribute [Authorize]
+
+<PageTitle>Admin: trim</PageTitle>
+
+<AdminNav Active="trims" />
+
+<MudText Typo="Typo.overline" Color="Color.Primary">Admin</MudText>
+<MudText Typo="Typo.h4" Class="mb-4" Style="font-weight: 600;">
+    @(Id == 0 ? "Add trim" : "Edit trim")
+</MudText>
+
+@if (!_loaded)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else if (_form is null)
+{
+    <MudAlert Severity="Severity.Warning" Class="mb-4">Trim not found.</MudAlert>
+    <MudButton Href="/admin/trims" Variant="Variant.Outlined" Color="Color.Primary">Back to trims</MudButton>
+}
+else
+{
+    <MudPaper Class="price-panel pa-5" Elevation="0" Style="max-width: 560px;">
+        <EditForm Model="_form" OnValidSubmit="SaveAsync">
+            <DataAnnotationsValidator />
+
+            <MudSelect T="int" @bind-Value="_form.CarModelId" For="@(() => _form.CarModelId)"
+                       Label="Model" Variant="Variant.Outlined" Class="mb-3">
+                @foreach (var model in _models)
+                {
+                    <MudSelectItem T="int" Value="@model.Id">@model.Brand.Name @model.Name</MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudTextField T="string" @bind-Value="_form.Name" For="@(() => _form.Name)"
+                          Label="Trim name" Variant="Variant.Outlined" Class="mb-3" />
+
+            <MudNumericField T="decimal" @bind-Value="_form.BasePrice" For="@(() => _form.BasePrice)"
+                             Label="Base price (DKK)" Variant="Variant.Outlined" Min="0" Class="mb-4" />
+
+            @if (Id == 0)
+            {
+                <MudSelect T="int?" @bind-Value="_form.CopyOptionsFromTrimId"
+                           Label="Start with the options of" Variant="Variant.Outlined" Clearable="true"
+                           HelperText="Optional. Copies which options this trim offers, so the configurator is not empty."
+                           Class="mb-4">
+                    @foreach (var trim in _trims)
+                    {
+                        <MudSelectItem T="int?" Value="@((int?)trim.Id)">
+                            @trim.CarModel.Brand.Name @trim.CarModel.Name @trim.Name
+                        </MudSelectItem>
+                    }
+                </MudSelect>
+            }
+
+            <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary"
+                       Disabled="@_saving">
+                @(_saving ? "Saving..." : "Save")
+            </MudButton>
+            <MudButton Href="/admin/trims" Variant="Variant.Outlined" Color="Color.Primary" Class="ml-2">
+                Cancel
+            </MudButton>
+        </EditForm>
+    </MudPaper>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private TrimFormModel? _form;
+    private List<CarModel> _models = new();
+    private List<Trim> _trims = new();
+    private bool _loaded;
+    private bool _saving;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _models = await TrimAdmin.GetModelsAsync();
+        _trims = await TrimAdmin.GetTrimsAsync();
+
+        if (Id == 0)
+        {
+            _form = new TrimFormModel
+            {
+                CarModelId = _models.FirstOrDefault()?.Id ?? 0
+            };
+        }
+        else
+        {
+            _form = await TrimAdmin.GetTrimFormAsync(Id);
+        }
+
+        _loaded = true;
+    }
+
+    private async Task SaveAsync()
+    {
+        _saving = true;
+
+        try
+        {
+            await TrimAdmin.SaveTrimAsync(_form!);
+            Snackbar.Add("Trim saved.", Severity.Success);
+            Navigation.NavigateTo("/admin/trims");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Saving trim {TrimId} failed", _form!.Id);
+            Snackbar.Add("Could not save the trim. Please try again.", Severity.Error);        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

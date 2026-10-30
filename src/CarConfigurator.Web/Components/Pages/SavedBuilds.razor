@@ -1,0 +1,58 @@
+@page "/saved"
+@using System.Globalization
+@using CarConfigurator.Data.Services
+@using CarConfigurator.Domain.Entities
+@inject ConfiguratorService Service
+@attribute [Authorize]
+
+<PageTitle>Saved builds</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Saved builds</MudText>
+
+@if (_builds is null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else if (_builds.Count == 0)
+{
+    <MudAlert Severity="Severity.Info" Class="mb-4">No saved builds yet.</MudAlert>
+    <MudButton Href="/" Variant="Variant.Outlined" Color="Color.Primary">Choose a car</MudButton>}
+else
+{
+    <MudPaper Class="pa-4">
+        <MudSimpleTable Dense="true" Hover="true" Elevation="0">
+            <thead>
+                <tr>
+                    <th>Car</th>
+                    <th>Saved</th>
+                    <th style="text-align: right;">Total</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var build in _builds)
+                {
+                    <tr>
+                        <td>@build.Trim.CarModel.Brand.Name @build.Trim.CarModel.Name @build.Trim.Name</td>
+                        <td>@build.CreatedAt.ToLocalTime().ToString("g", Danish)</td>
+                        <td style="text-align: right;">@build.TotalPrice.ToString("C0", Danish)</td>
+                        <td style="text-align: right;">
+                            <MudButton Href="@($"/summary/{build.ShareCode}")" Size="Size.Small" Color="Color.Primary">View</MudButton>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+    </MudPaper>
+}
+
+@code {
+    private static readonly CultureInfo Danish = new("da-DK");
+
+    private List<SavedConfiguration>? _builds;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _builds = await Service.GetSavedConfigurationsAsync();
+    }
+}

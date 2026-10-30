@@ -1,0 +1,295 @@
+@page "/configure/{TrimId:int}"
+@using System.Globalization
+@using CarConfigurator.Data.Services
+@using CarConfigurator.Domain.Pricing
+@using CarConfigurator.Domain.Rules
+@inject ConfiguratorService Service
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+@inject ILogger<Configure> Logger
+
+<PageTitle>Configure</PageTitle>
+
+@if (!_loaded)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else if (_config is null)
+{
+    <MudAlert Severity="Severity.Warning" Class="mb-4">Trim not found.</MudAlert>
+    <MudButton Href="/" Variant="Variant.Outlined" Color="Color.Primary">Back to cars</MudButton>
+}
+else
+{
+        <div class="config-hero">
+        <div class="config-hero-photo">
+            @if (!string.IsNullOrEmpty(_config.ImageUrl))
+            {
+                <img src="@_config.ImageUrl" alt="@_config.ModelName @_config.TrimName" />
+            }
+        </div>
+        <div class="config-hero-text">
+            <MudText Typo="Typo.overline" Color="Color.Primary">@_config.BrandName</MudText>
+            <MudText Typo="Typo.h4" Style="font-weight: 600; color: var(--mud-palette-primary);">@_config.ModelName @_config.TrimName</MudText>
+            <MudText Typo="Typo.subtitle1" Style="color: var(--mud-palette-text-secondary);">
+                Starting at
+                <span style="color: #ffffff; font-weight: 600;">@_config.BasePrice.ToString("C0", Danish)</span>
+            </MudText>
+        </div>
+    </div>
+    
+    
+
+    <MudGrid>
+        <MudItem xs="12" md="8">
+            @for (var i = 0; i < _config.Categories.Count; i++)
+            {
+                var category = _config.Categories[i];
+
+                <div class="section-head">
+                    <span class="section-num">@((i + 1).ToString("00"))</span>
+                    <MudText Typo="Typo.h6" Style="font-weight: 600;">@category.Name</MudText>
+                    @if (IsMulti(category))
+                    {
+                        <MudText Typo="Typo.caption" Style="color: var(--mud-palette-text-secondary);">
+                            Choose several
+                        </MudText>
+                    }
+                </div>
+
+                <MudGrid Spacing="2" Class="mt-0">
+                    @foreach (var option in category.Options)
+                    {
+                        var selected = _selected.Contains(option.Id);
+                        var blocked = _blocked.Contains(option.Id);
+
+                        <MudItem xs="12" sm="6">
+                            <div class="option-card @(selected ? "selected" : "") @(blocked ? "blocked" : "")"
+                                 @onclick="() => OnCardClickAsync(category, option)">
+                                <div class="option-row">
+                                    @if (category.Name == "Color")
+                                    {
+                                        <span class="swatch" style="@($"background: {SwatchColor(option.Name)};")"></span>
+                                    }
+                                    <div>
+                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@option.Name</MudText>
+                                        <MudText Typo="Typo.body2" Style="color: var(--mud-palette-text-secondary);">
+                                            @PriceText(option)
+                                        </MudText>
+                                    </div>
+                                </div>
+
+                                @if (selected)
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Class="option-check" />
+                                }
+                                @if (blocked)
+                                {
+                                    <MudText Typo="Typo.caption" Class="mt-1" Style="color: var(--mud-palette-warning);">
+                                        Not available with your current choices
+                                    </MudText>
+                                }
+                            </div>
+                        </MudItem>
+                    }
+                </MudGrid>
+            }
+        </MudItem>
+
+        <MudItem xs="12" md="4">
+            <MudPaper Class="pa-5 price-panel" Elevation="0" Style="position: sticky; top: 80px;">
+                <MudText Typo="Typo.overline" Color="Color.Primary">Your price</MudText>
+
+                @if (_price is not null)
+                {
+                    <MudText Typo="Typo.h4" Class="mb-3" Style="font-weight: 600;">
+                        @_price.Total.ToString("C0", Danish)
+                    </MudText>
+
+                    <MudDivider Class="mb-3" />
+
+                    <div class="price-line">
+                        <MudText Typo="Typo.body2">Base price</MudText>
+                        <MudText Typo="Typo.body2">@_price.BasePrice.ToString("C0", Danish)</MudText>
+                    </div>
+
+                    @foreach (var line in _price.Lines.Where(l => l.Price != 0))
+                    {
+                        <div class="price-line">
+                            <MudText Typo="Typo.body2" Style="color: var(--mud-palette-text-secondary);">@line.Name</MudText>
+                            <MudText Typo="Typo.body2">+ @line.Price.ToString("C0", Danish)</MudText>
+                        </div>
+                    }
+
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Class="mt-5"
+                               Disabled="@_saving" OnClick="SaveAsync">
+                        @(_saving ? "Saving..." : "Save my configuration")
+                    </MudButton>
+
+                    <MudButton Href="/" Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true" Class="mt-2">
+                        Back to cars
+                    </MudButton>
+                }
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    private static readonly CultureInfo Danish = new("da-DK");
+    private const string MultiCategory = "Packages";
+
+    [Parameter]
+    public int TrimId { get; set; }
+
+    private TrimConfigDto? _config;
+    private PriceResult? _price;
+    private readonly HashSet<int> _selected = new();
+    private HashSet<int> _blocked = new();
+    private Dictionary<int, string> _names = new();
+    private Dictionary<int, CategoryDto> _categoryOf = new();
+    private bool _loaded;
+    private bool _saving;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _config = await Service.GetTrimConfigAsync(TrimId);
+        _selected.Clear();
+
+        if (_config is not null)
+        {
+            _names = _config.Categories
+                .SelectMany(c => c.Options)
+                .ToDictionary(o => o.Id, o => o.Name);
+
+            _categoryOf = _config.Categories
+                .SelectMany(c => c.Options.Select(o => (o.Id, Category: c)))
+                .ToDictionary(x => x.Id, x => x.Category);
+
+            foreach (var category in _config.Categories.Where(c => !IsMulti(c)))
+                _selected.Add(category.Options.First().Id);
+
+            await RefreshAsync(new List<string>());
+        }
+
+        _loaded = true;
+    }
+
+    private static bool IsMulti(CategoryDto category) => category.Name == MultiCategory;
+
+    private string Name(int optionId) => _names[optionId];
+
+    private static string PriceText(OptionDto option)
+        => option.Price == 0 ? "Included" : $"+ {option.Price.ToString("C0", Danish)}";
+
+    private static string SwatchColor(string name) => name switch
+    {
+        "White" => "#f5f5f5",
+        "Black" => "#111111",
+        "Red" => "#c4262e",
+        "Blue" => "#2a5db0",
+        _ => "#888888"
+    };
+
+    private async Task OnCardClickAsync(CategoryDto category, OptionDto option)
+    {
+        if (_blocked.Contains(option.Id)) return;
+
+        if (IsMulti(category))
+            await OnToggleAsync(option.Id, !_selected.Contains(option.Id));
+        else if (!_selected.Contains(option.Id))
+            await OnPickAsync(category, option.Id);
+    }
+
+    private async Task OnPickAsync(CategoryDto category, int optionId)
+    {
+        var messages = new List<string>();
+
+        foreach (var old in category.Options.Where(o => o.Id != optionId && _selected.Contains(o.Id)).ToList())
+            RemoveWithDependents(old.Id, messages);
+
+        AddWithRequirements(optionId, messages);
+        await RefreshAsync(messages);
+    }
+
+    private async Task OnToggleAsync(int optionId, bool on)
+    {
+        var messages = new List<string>();
+
+        if (on) AddWithRequirements(optionId, messages);
+        else RemoveWithDependents(optionId, messages);
+
+        await RefreshAsync(messages);
+    }
+
+    private void AddWithRequirements(int optionId, List<string> messages)
+    {
+        var result = RuleEngine.Select(_selected, optionId, _config!.Rules);
+        SetSelection(result.SelectedIds);
+
+        foreach (var removed in result.Removed)
+            messages.Add($"{Name(removed)} was removed because it does not work with {Name(optionId)}.");
+
+        foreach (var added in result.AutoAdded)
+        {
+            messages.Add($"{Name(added)} was added because it is required.");
+
+            var category = _categoryOf[added];
+            if (!IsMulti(category))
+            {
+                foreach (var other in category.Options.Where(o => o.Id != added && _selected.Contains(o.Id)).ToList())
+                    RemoveWithDependents(other.Id, messages);
+            }
+        }
+    }
+
+    private void RemoveWithDependents(int optionId, List<string> messages)
+    {
+        var result = RuleEngine.Deselect(_selected, optionId, _config!.Rules);
+        SetSelection(result.SelectedIds);
+
+        foreach (var removed in result.Removed)
+            messages.Add($"{Name(removed)} was removed because it needs {Name(optionId)}.");
+    }
+
+    private void SetSelection(HashSet<int> ids)
+    {
+        _selected.Clear();
+        foreach (var id in ids) _selected.Add(id);
+    }
+
+    private async Task RefreshAsync(List<string> messages)
+    {
+        _blocked = RuleEngine.GetBlockedOptionIds(_selected, _config!.Rules);
+        _price = await Service.CalculatePriceAsync(TrimId, _selected);
+
+        foreach (var message in messages)
+            Snackbar.Add(message, Severity.Info);
+    }
+
+    private async Task SaveAsync()
+    {
+        _saving = true;
+
+        try
+        {
+            var id = await Service.SaveConfigurationAsync(TrimId, _selected);
+
+            if (id is null)
+            {
+                Snackbar.Add("Could not save the configuration.", Severity.Error);
+                return;
+            }
+
+            Navigation.NavigateTo($"/summary/{id}");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Saving a configuration failed for trim {TrimId}", TrimId);
+            Snackbar.Add("Something went wrong while saving. Please try again.", Severity.Error);        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

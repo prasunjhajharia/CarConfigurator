@@ -1,0 +1,98 @@
+@page "/summary/{Code:guid}"
+@using System.Globalization
+@using CarConfigurator.Data.Services
+@using CarConfigurator.Domain.Entities
+@inject ConfiguratorService Service
+@inject NavigationManager Navigation
+
+<PageTitle>Your configuration</PageTitle>
+
+@if (!_loaded)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else if (_saved is null)
+{
+    <MudAlert Severity="Severity.Warning" Class="mb-4">Configuration not found.</MudAlert>
+    <MudButton Href="/" Variant="Variant.Outlined" Color="Color.Primary">Back to cars</MudButton>
+}
+else
+{
+    var image = _saved.Trim.ImageUrl ?? _saved.Trim.CarModel.ImageUrl;
+
+    <MudText Typo="Typo.overline" Color="Color.Primary">Your configuration</MudText>
+    <MudText Typo="Typo.h4" Style="font-weight: 600;">
+        @_saved.Trim.CarModel.Brand.Name @_saved.Trim.CarModel.Name @_saved.Trim.Name
+    </MudText>
+    <MudText Typo="Typo.subtitle1" Class="mb-4" Style="color: var(--mud-palette-text-secondary);">
+        Saved @_saved.CreatedAt.ToLocalTime().ToString("g", Danish)
+    </MudText>
+
+    @if (!string.IsNullOrEmpty(image))
+    {
+        <img src="@image" alt="@_saved.Trim.CarModel.Name @_saved.Trim.Name"
+             style="width: 100%; max-height: 300px; object-fit: cover; border-radius: 12px; border: 1px solid var(--mud-palette-lines-default); margin-bottom: 1.5rem;" />
+    }
+
+    <MudPaper Class="price-panel pa-4 mb-4" Elevation="0">
+        <MudSimpleTable Dense="true" Elevation="0">
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th style="text-align: right;">Price</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>@_saved.Trim.CarModel.Name @_saved.Trim.Name (base price)</td>
+                    <td style="text-align: right;">@BasePriceAtSave.ToString("C0", Danish)</td>
+                </tr>
+                @foreach (var item in _saved.Items
+                    .OrderBy(i => i.Option.OptionCategory.SortOrder)
+                    .ThenBy(i => i.Option.Name))
+                {
+                    <tr>
+                        <td>@item.Option.OptionCategory.Name: @item.Option.Name</td>
+                        <td style="text-align: right;">
+                            @(item.PriceAtSave == 0 ? "Included" : item.PriceAtSave.ToString("C0", Danish))
+                        </td>
+                    </tr>
+                }
+                <tr>
+                    <td><strong>Total</strong></td>
+                    <td style="text-align: right;">
+                        <strong style="color: var(--mud-palette-primary); font-size: 1.15rem;">
+                            @_saved.TotalPrice.ToString("C0", Danish)
+                        </strong>
+                    </td>
+                </tr>
+            </tbody>
+        </MudSimpleTable>
+    </MudPaper>
+
+    <MudTextField T="string" Value="@Navigation.Uri" ReadOnly="true"
+                  Label="Share link" Variant="Variant.Outlined" Class="mb-4" />
+
+    <MudButton Href="@($"/configure/{_saved.TrimId}")" Variant="Variant.Filled" Color="Color.Primary" Class="mr-2">
+        Configure again
+    </MudButton>
+    <MudButton Href="/" Variant="Variant.Outlined" Color="Color.Primary">Back to cars</MudButton>
+}
+
+@code {
+    private static readonly CultureInfo Danish = new("da-DK");
+
+    [Parameter]
+    public Guid Code { get; set; }
+
+    private SavedConfiguration? _saved;
+    private bool _loaded;
+
+    private decimal BasePriceAtSave => _saved!.TotalPrice - _saved.Items.Sum(i => i.PriceAtSave);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _saved = await Service.GetSavedConfigurationAsync(Code);
+        _loaded = true;
+    }
+}

@@ -1,0 +1,81 @@
+@page "/model/{ModelId:int}"
+@using System.Globalization
+@using CarConfigurator.Data.Services
+@using CarConfigurator.Domain.Entities
+@inject ConfiguratorService Service
+
+<PageTitle>Choose a trim</PageTitle>
+
+@if (!_loaded)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else if (_model is null)
+{
+    <MudAlert Severity="Severity.Warning" Class="mb-4">Model not found.</MudAlert>
+    <MudButton Href="/" Variant="Variant.Outlined">Back to cars</MudButton>
+}
+else
+{
+    <MudText Typo="Typo.overline" Color="Color.Primary">@_model.Brand.Name</MudText>
+    <MudText Typo="Typo.h4" Style="font-weight: 600;">@_model.Name</MudText>
+    <MudText Typo="Typo.subtitle1" Class="mb-4" Style="color: var(--mud-palette-text-secondary);">
+        Choose a trim
+    </MudText>
+
+    <MudGrid>
+        @foreach (var trim in _model.Trims)
+        {
+            var image = trim.ImageUrl ?? _model.ImageUrl;
+
+            <MudItem xs="12" sm="6" md="4">
+                <MudCard Class="model-card" Elevation="0">
+                    <div class="model-visual">
+                        @if (!string.IsNullOrEmpty(image))
+                        {
+                            <img src="@image" alt="@_model.Name @trim.Name" class="model-img" />
+                        }
+                        else
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.DirectionsCar"
+                                     Style="font-size: 4.5rem; opacity: 0.45;" />
+                        }
+                    </div>
+                    <MudCardContent>
+                        <MudText Typo="Typo.h6">@trim.Name</MudText>
+                        <MudText Typo="Typo.body2" Style="color: var(--mud-palette-text-secondary);">
+                            From @trim.BasePrice.ToString("C0", Danish)
+                        </MudText>
+                    </MudCardContent>
+                    <MudCardActions>
+                        <MudButton Href="@($"/configure/{trim.Id}")" Variant="Variant.Filled" Color="Color.Primary" Class="ml-2 mb-2">
+                            Configure
+                        </MudButton>
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
+    <MudButton Href="/" Variant="Variant.Outlined" Color="Color.Primary" Class="mt-6"
+           StartIcon="@Icons.Material.Filled.ArrowBack">
+        Back to cars
+    </MudButton>
+
+    
+}
+
+@code {
+    private static readonly CultureInfo Danish = new("da-DK");
+
+    [Parameter]
+    public int ModelId { get; set; }
+
+    private CarModel? _model;
+    private bool _loaded;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _model = await Service.GetModelWithTrimsAsync(ModelId);
+        _loaded = true;
+    }
+}

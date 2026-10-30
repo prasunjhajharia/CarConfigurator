@@ -1,0 +1,231 @@
+html, body {
+    font-family: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+a, .btn-link {
+    color: var(--mud-palette-primary);
+}
+
+h1:focus {
+    outline: none;
+}
+
+/* Form validation (used by the admin forms later) */
+.valid.modified:not([type=checkbox]) {
+    outline: 1px solid #26b050;
+}
+
+.invalid {
+    outline: 1px solid #e50000;
+}
+
+.validation-message {
+    color: #e50000;
+}
+
+/* Shown by Blazor if a component crashes */
+.blazor-error-boundary {
+    background: #b32121;
+    padding: 1rem;
+    color: white;
+}
+
+.blazor-error-boundary::after {
+    content: "An error has occurred.";
+}
+
+/* Home page: rotating banner */
+.hero {
+    position: relative;
+    overflow: hidden;
+    min-height: 340px;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    border-radius: 12px;
+    border: 1px solid var(--mud-palette-lines-default);
+    background: linear-gradient(135deg, #1c212b 0%, #0e1014 100%);
+}
+
+.hero-slide {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    opacity: 0;
+    animation: hero-fade 12s infinite;
+}
+
+.hero-slide-1 { background-image: url('images/hero1.jpg'); animation-delay: 0s; }
+.hero-slide-2 { background-image: url('images/hero2.jpg'); animation-delay: 4s; }
+.hero-slide-3 { background-image: url('images/hero3.jpg'); animation-delay: 8s; }
+
+@keyframes hero-fade {
+    0%   { opacity: 0; }
+    10%  { opacity: 1; }
+    33%  { opacity: 1; }
+    43%  { opacity: 0; }
+    100% { opacity: 0; }
+}
+
+.hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(14, 16, 20, 0.85) 0%, rgba(14, 16, 20, 0.35) 70%, rgba(14, 16, 20, 0.1) 100%);
+}
+
+.hero-content {
+    position: relative;
+    padding: 40px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hero-slide { animation: none; }
+    .hero-slide-1 { opacity: 1; }
+}
+
+/* Car model and trim cards */
+.model-card {
+    border: 1px solid var(--mud-palette-lines-default);
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.model-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--mud-palette-primary);
+}
+
+.model-visual {
+    height: 150px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(160deg, #232833 0%, #14171d 100%);
+}
+
+.model-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+}
+
+/* Configurator page: photo and title */
+.config-hero {
+    margin-bottom: 1rem;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--mud-palette-lines-default);
+    background: var(--mud-palette-surface);
+}
+
+.config-hero-photo {
+    height: 280px;
+    background: linear-gradient(135deg, #232833 0%, #14171d 100%);
+}
+
+.config-hero-photo img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+}
+
+.config-hero-text {
+    padding: 20px 28px;
+}
+
+@media (max-width: 600px) {
+    .config-hero-photo { height: 200px; }
+}
+
+/* Configurator page: sections */
+.section-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin: 2rem 0 0.75rem;
+}
+
+.section-num {
+    color: var(--mud-palette-primary);
+    font-weight: 600;
+    letter-spacing: 2px;
+    font-size: 0.85rem;
+}
+
+/* Configurator page: option cards (white, selected one in yellow) */
+.option-card {
+    position: relative;
+    height: 100%;
+    padding: 14px 16px;
+    cursor: pointer;
+    border: 2px solid #d9dce3;
+    border-radius: 12px;
+    background: #ffffff;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.option-card .mud-typography {
+    color: #111111 !important;
+}
+
+.option-card .mud-typography-body2 {
+    color: #555555 !important;
+}
+
+.option-card .mud-typography-caption {
+    color: #b45309 !important;
+}
+
+.option-card:hover {
+    border-color: #f5c518;
+}
+
+.option-card.selected {
+    border-color: #f5c518;
+    background: #fff8dc;
+}
+
+.option-card.blocked {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #eeeeee;
+}
+
+.option-card.blocked:hover {
+    border-color: #d9dce3;
+}
+
+.option-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.swatch {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid rgba(0, 0, 0, 0.2);
+    flex-shrink: 0;
+}
+
+.option-check {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    color: #d4a017;
+}
+.price-panel {
+    border: 1px solid var(--mud-palette-lines-default);
+}
+
+.price-line {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 2px 0;
+}
