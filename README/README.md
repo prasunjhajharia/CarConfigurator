@@ -6,8 +6,8 @@ I built it to practise Blazor, ASP.NET Core, C#, Entity Framework Core and Postg
 
 The cars, prices and photos are only examples. They are not real offers.
 
-![Home](docs/screenshots/home.png)
-![Configurator](docs/screenshots/configurator.png)
+
+
 
 ## What it does
 
@@ -32,12 +32,7 @@ You need the .NET 10 SDK, PostgreSQL and the EF Core tool (`dotnet tool install 
 
 1. Create an empty PostgreSQL database called `carconfigurator`.
 
-2. Save your database password and an admin password (replace the two placeholders):
-
-   ```bash
-   dotnet user-secrets set "ConnectionStrings:Default" "Host=localhost;Database=carconfigurator;Username=postgres;Password=YOUR_DB_PASSWORD" --project src/CarConfigurator.Web
-   dotnet user-secrets set "Admin:Password" "YOUR_ADMIN_PASSWORD" --project src/CarConfigurator.Web
-   ```
+2. Save your database password and an admin password 
 
 3. Create the tables:
 
