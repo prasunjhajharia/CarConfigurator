@@ -15,7 +15,7 @@ The cars, prices and photos are only examples. They are not real offers.
 - Choose options like engine, color, wheels and packages
 - The price updates after every click
 - Some options need or block others. For example, the Sport package adds the wheels it needs and blocks the diesel engine
-- Save your build and share it with a private link
+- Save your build 
 - An admin area, with a password, to change options, trims and prices
 
 ## What I used
